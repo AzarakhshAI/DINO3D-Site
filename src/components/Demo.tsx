@@ -6,7 +6,7 @@ import DinoCanvas, { type DinoHandle } from "./DinoCanvas";
 import { Reveal } from "./ui";
 
 const pad = (n: number) => String(n).padStart(5, "0");
-const KEY = "hm-dino-demo-hi";
+const KEY = "dino3d-hi";
 
 function loadHi() {
   try {
@@ -112,7 +112,7 @@ export default function Demo({ dark }: { dark: boolean }) {
             همین‌جا بازی کن!
           </h2>
           <p className="mt-5 leading-8 text-soft">
-            این یک دموی کوچک از بازی منه. با <b className="text-ink">Space</b> یا
+            این دمو از منطق اصلی بازی DINO 3D استفاده می‌کند. با <b className="text-ink">Space</b> یا
             لمس صفحه بپر و با <b className="text-ink">↓</b> خم شو. فکر می‌کنی
             بتونی رکورد من، <span className="font-pixel text-xs text-ink" dir="ltr">{pad(AUTHOR_HI)}</span>، رو بشکنی؟
           </p>

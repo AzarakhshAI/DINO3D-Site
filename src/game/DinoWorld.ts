@@ -51,10 +51,10 @@ const FLAT = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
 const DINO_X = -4;
 const SPAWN_X = 80;
 const DESPAWN_X = -32;
-const GRAVITY = 62;
-const JUMP_V = 22;
-const BASE_SPEED = 14;
-const MAX_SPEED = 30;
+const GRAVITY = 58;
+const JUMP_V = 19.5;
+const BASE_SPEED = 11;
+const MAX_SPEED = 25;
 const AUTO_MAX = 21;
 
 function box(
@@ -394,16 +394,18 @@ export class DinoWorld {
     shadow.position.y = 0.04;
     let ob: Obstacle;
     const z = (Math.random() - 0.5) * 0.4;
-    if (this.score > 200 && Math.random() < 0.26) {
+    if (this.score > 250 && Math.random() < 0.3) {
       const b = this.makeBird();
-      b.g.position.set(x, 2.5, z);
+      const levels = [0.55, 1.6, 2.95];
+      const level = levels[Math.floor(Math.random() * levels.length)];
+      b.g.position.set(x, level, z);
       shadow.scale.set(1.4, 1, 0.9);
       ob = {
         group: b.g,
         x,
         w: 1.7,
         h: 1.0,
-        y0: 2.5,
+        y0: level - 0.22,
         bird: true,
         decor: false,
         age: 0,
@@ -455,7 +457,7 @@ export class DinoWorld {
   }
 
   private gap(speed: number) {
-    return speed * 0.73 + 5 + Math.random() * (speed * 0.8 + 4);
+    return speed * (0.95 + Math.random() * 1.15) + 4;
   }
 
   private clearObstacles() {
@@ -647,12 +649,9 @@ export class DinoWorld {
     const moving = this.state === "running";
 
     if (moving) {
-      const target =
-        this.mode === "auto"
-          ? Math.min(AUTO_MAX, 15 + this.score * 0.004)
-          : Math.min(MAX_SPEED, BASE_SPEED + this.score * 0.012);
-      this.speed += (target - this.speed) * Math.min(1, dt * 2);
-      this.score += dt * this.speed * 1.1;
+      // Match the original DINO 3D runner: steady acceleration and distance-based score.
+      this.speed = Math.min(MAX_SPEED, this.speed + 0.12 * dt);
+      this.score += dt * this.speed;
       this.emitScore();
       if (this.mode === "auto") this.autopilot();
     } else {
@@ -662,7 +661,7 @@ export class DinoWorld {
     // physics
     const wasAir = !this.grounded;
     if (!this.grounded) {
-      const g = this.ducking ? GRAVITY * 1.9 : GRAVITY;
+      const g = this.ducking ? GRAVITY * 2.8 : GRAVITY;
       this.vy -= g * dt;
       this.dinoY += this.vy * dt;
       if (this.dinoY <= 0) {
