@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef } from "react";
+import { Game } from "../game/OriginalGame";
 import { AUTHOR_HI, GAME_URL } from "../config";
 import DinoCanvas from "./DinoCanvas";
 import { CountUp, Reveal } from "./ui";
@@ -6,15 +7,54 @@ import { CountUp, Reveal } from "./ui";
 const pad = (n: number) => String(n).padStart(5, "0");
 
 function Stage({ dark }: { dark: boolean }) {
-  const [score, setScore] = useState(0);
+  void dark;
+  const host = useRef<HTMLDivElement>(null);
+  const scoreDisplay = useRef<HTMLSpanElement>(null);
+  const visible = useRef(false);
+
+  useEffect(() => {
+    const mount = host.current;
+    if (!mount) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        visible.current = entry.isIntersecting;
+      },
+      { threshold: 0.05 }
+    );
+    observer.observe(mount);
+
+    let instance: Game;
+    try {
+      instance = new Game(mount, {
+        autoPlay: true,
+        isActive: () => visible.current,
+        onState: () => {},
+        onScore: (score) => {
+          if (scoreDisplay.current) {
+            const next = pad(score);
+            if (scoreDisplay.current.textContent !== next) {
+              scoreDisplay.current.textContent = next;
+            }
+          }
+        },
+      });
+    } catch {
+      mount.textContent = "مرورگر شما از WebGL پشتیبانی نمی‌کند. لطفاً مرورگر دیگری را امتحان کنید.";
+      observer.disconnect();
+      return;
+    }
+
+    return () => {
+      visible.current = false;
+      observer.disconnect();
+      instance.dispose();
+    };
+  }, []);
+
   return (
     <div className="pixel-box scanlines relative mx-auto h-[min(46vh,500px)] min-h-[290px] w-full max-w-6xl overflow-hidden">
-      <DinoCanvas
-        mode="auto"
-        dark={dark}
-        className="absolute inset-0"
-        onScore={setScore}
-      />
+      <div ref={host} className="absolute inset-0" />
       <div
         className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between p-3 font-pixel text-[10px] text-soft sm:p-5 sm:text-sm"
         dir="ltr"
@@ -24,12 +64,12 @@ function Stage({ dark }: { dark: boolean }) {
         </span>
         <span className="flex gap-3 sm:gap-5">
           <span>HI {pad(AUTHOR_HI)}</span>
-          <span className="text-ink">{pad(score)}</span>
+          <span ref={scoreDisplay} className="text-ink">00000</span>
         </span>
       </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center">
         <span className="bg-paper/70 px-3 py-1 text-xs font-bold text-soft backdrop-blur-sm">
-          ✦ ماوس را حرکت بده تا دوربین دنبالت بیاید ✦
+          ✦ دمو به‌صورت خودکار بازی می‌شود ✦
         </span>
       </div>
     </div>
