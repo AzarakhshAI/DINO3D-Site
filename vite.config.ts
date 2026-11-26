@@ -8,9 +8,11 @@ import { viteSingleFile } from "vite-plugin-singlefile";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// https://vite.dev/config/
+// GitHub Pages serves the site from a repository subpath; Vercel serves it from the domain root.
+const base = process.env.VERCEL ? "/" : "/DINO3D-Site/";
+
 export default defineConfig({
-  base: "/DINO3D-Site/",
+  base,
   plugins: [react(), tailwindcss(), viteSingleFile()],
   resolve: {
     alias: {
