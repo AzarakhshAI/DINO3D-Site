@@ -55,7 +55,6 @@ const GRAVITY = 58;
 const JUMP_V = 19.5;
 const BASE_SPEED = 11;
 const MAX_SPEED = 25;
-const AUTO_MAX = 21;
 
 function box(
   mat: THREE.Material,

@@ -17,6 +17,7 @@ function loadHi() {
 }
 
 export default function Demo({ dark }: { dark: boolean }) {
+  void dark;
   const game = useRef<DinoHandle>(null);
   const section = useRef<HTMLElement>(null);
   const visible = useRef(false);
