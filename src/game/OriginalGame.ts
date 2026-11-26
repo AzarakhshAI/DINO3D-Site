@@ -8,6 +8,7 @@ export interface GameCallbacks {
   isActive?: () => boolean;
   onPause?: (paused: boolean) => void;
   onMute?: (muted: boolean) => void;
+  autoPlay?: boolean;
 }
 
 const DAY_BG = new THREE.Color("#f7f7f7");
@@ -181,6 +182,10 @@ export class Game {
     window.addEventListener("blur", this.onBlur);
 
     this.applyTheme();
+    if (this.cb.autoPlay) {
+      this.state = "playing";
+      this.cb.onState("playing");
+    }
     this.emitScore();
     this.lastTime = performance.now();
     this.raf = requestAnimationFrame(this.loop);
@@ -561,7 +566,11 @@ export class Game {
 
   private update(dt: number) {
     this.time += dt;
+    if (this.cb.autoPlay && this.state === "over" && this.time - (this.deadAt / 1000) > 1.1) {
+      this.restart();
+    }
     const playing = this.state === "playing";
+    if (playing && this.cb.autoPlay) this.autopilot();
     let scroll = 0;
 
     if (playing) {
@@ -735,6 +744,24 @@ export class Game {
   /* ------------------------------------------------------------------ */
   /* Obstacles                                                           */
   /* ------------------------------------------------------------------ */
+
+  private autopilot() {
+    let shouldDuck = false;
+    let shouldJump = false;
+    for (const obstacle of this.obstacles) {
+      const dx = obstacle.x - 0.3;
+      if (obstacle.kind === "bird") {
+        if (dx < 9 && dx > -2.2 && obstacle.y0 < 2.2) shouldDuck = true;
+      } else if (dx > 0 && dx <= Math.max(5, this.speed * 0.42)) {
+        shouldJump = true;
+      }
+    }
+    this.duckHeld = shouldDuck && this.onGround;
+    if (shouldJump && this.onGround && !shouldDuck) {
+      this.vy = JUMP_V;
+      this.onGround = false;
+    }
+  }
 
   private updateObstacles(dt: number, scroll: number) {
     this.gapRemain -= scroll;
