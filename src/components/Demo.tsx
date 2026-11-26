@@ -23,9 +23,10 @@ export default function Demo({ dark }: { dark: boolean }) {
   const [sound, setSound] = useState(true);
   const [state, setState] = useState<GameState>("ready");
   const [paused, setPaused] = useState(false);
-  const [score, setScore] = useState(0);
-  const [hi, setHi] = useState(loadHi());
-  const [scoreVisible, setScoreVisible] = useState(true);
+  const scoreValue = useRef(0);
+  const scoreDisplay = useRef<HTMLSpanElement>(null);
+  const hiDisplay = useRef<HTMLSpanElement>(null);
+  const [beatAuthor, setBeatAuthor] = useState(false);
 
   useEffect(() => {
     const el = section.current;
@@ -46,12 +47,17 @@ export default function Demo({ dark }: { dark: boolean }) {
         isActive: () => visible.current,
         onState: (next) => {
           setState(next);
+          if (next === "over") setBeatAuthor(scoreValue.current > AUTHOR_HI);
+          else setBeatAuthor(false);
           if (next !== "playing") setPaused(false);
         },
         onScore: (nextScore, nextHi, shown) => {
-          setScore(nextScore);
-          setHi(nextHi);
-          setScoreVisible(shown);
+          scoreValue.current = nextScore;
+          if (scoreDisplay.current) {
+            scoreDisplay.current.textContent = pad(nextScore);
+            scoreDisplay.current.style.visibility = shown ? "visible" : "hidden";
+          }
+          if (hiDisplay.current) hiDisplay.current.textContent = nextHi > 0 ? `HI ${pad(nextHi)}` : "";
         },
         onPause: setPaused,
         onMute: setSound,
@@ -72,8 +78,6 @@ export default function Demo({ dark }: { dark: boolean }) {
   }, []);
 
   const toggleSound = () => game.current?.setMuted(!sound);
-
-  const beatAuthor = state === "over" && score > AUTHOR_HI;
 
   return (
     <section
@@ -115,10 +119,8 @@ export default function Demo({ dark }: { dark: boolean }) {
                 SOUND {sound ? "ON" : "OFF"}
               </button>
               <div className="font-pixel text-[10px] text-soft sm:text-base">
-                <span>HI {pad(hi)}</span>
-                <span className="ml-3 text-ink sm:ml-6" style={{ visibility: scoreVisible ? "visible" : "hidden" }}>
-                  {pad(score)}
-                </span>
+                <span ref={hiDisplay}>HI {pad(loadHi())}</span>
+                <span ref={scoreDisplay} className="ml-3 text-ink sm:ml-6">00000</span>
               </div>
             </div>
 
