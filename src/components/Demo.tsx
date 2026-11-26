@@ -80,6 +80,12 @@ export default function Demo({ dark }: { dark: boolean }) {
       } else if (e.code === "ArrowDown" || e.code === "KeyS") {
         e.preventDefault();
         game.current?.setDuck(true);
+      } else if (e.code === "KeyP" || e.code === "Escape") {
+        e.preventDefault();
+        game.current?.togglePause();
+      } else if (e.code === "KeyM") {
+        soundRef.current = !soundRef.current;
+        setSound(soundRef.current);
       }
     };
     const up = (e: KeyboardEvent) => {
@@ -179,6 +185,14 @@ export default function Demo({ dark }: { dark: boolean }) {
                   <div className="blink mt-3 text-sm font-bold text-soft">
                     برای شروع بزن
                   </div>
+                </div>
+              </div>
+            )}
+            {state === "paused" && (
+              <div className="pointer-events-none absolute inset-x-0 top-[22%] z-20 text-center">
+                <div className="pop inline-block bg-paper/85 px-6 py-5 backdrop-blur-sm">
+                  <div className="font-pixel text-sm text-ink sm:text-xl" dir="ltr">PAUSED</div>
+                  <div className="mt-3 text-sm font-bold text-soft">برای ادامه P را بزن</div>
                 </div>
               </div>
             )}

@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
 export type WorldMode = "auto" | "play";
-export type GameState = "ready" | "running" | "over";
+export type GameState = "ready" | "running" | "paused" | "over";
 export type SoundKind = "jump" | "die" | "milestone";
 
 export interface WorldOptions {
@@ -149,6 +149,7 @@ export class DinoWorld {
   private score = 0;
   private lastShown = -1;
   private state: GameState = "ready";
+  private paused = false;
   private distSince = 0;
   private nextGap = 20;
   private decorTimer = 0;
@@ -528,6 +529,7 @@ export class DinoWorld {
     this.ducking = false;
     this.duckAmt = 0;
     this.shake = 0;
+    this.paused = false;
     this.nightT = 0;
     this.nightOn = false;
     this.nightTimer = 0;
@@ -542,6 +544,18 @@ export class DinoWorld {
 
   getState() {
     return this.state;
+  }
+
+  togglePause() {
+    if (this.state === "running") {
+      this.paused = true;
+      this.state = "paused";
+      this.cb.onState?.("paused");
+    } else if (this.state === "paused") {
+      this.paused = false;
+      this.state = "running";
+      this.cb.onState?.("running");
+    }
   }
 
   start() {
@@ -654,6 +668,7 @@ export class DinoWorld {
   }
 
   private step(dt: number) {
+    if (this.paused) return;
     this.time += dt;
     const moving = this.state === "running";
 

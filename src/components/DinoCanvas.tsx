@@ -16,6 +16,7 @@ export interface DinoHandle {
   jump: () => void;
   start: () => void;
   setDuck: (on: boolean) => void;
+  togglePause: () => void;
 }
 
 interface Props {
@@ -46,6 +47,7 @@ const DinoCanvas = forwardRef<DinoHandle, Props>(function DinoCanvas(
     jump: () => world.current?.jump(),
     start: () => world.current?.start(),
     setDuck: (on: boolean) => world.current?.setDuck(on),
+    togglePause: () => world.current?.togglePause(),
   }));
 
   useEffect(() => {
