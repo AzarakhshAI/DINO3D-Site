@@ -528,6 +528,11 @@ export class DinoWorld {
     this.ducking = false;
     this.duckAmt = 0;
     this.shake = 0;
+    this.nightT = 0;
+    this.nightOn = false;
+    this.nightTimer = 0;
+    this.nightIdx = 0;
+    this.applyTheme(this.dark);
     this.state = this.mode === "auto" ? "running" : "ready";
     this.prefill();
     this.emitScore();
