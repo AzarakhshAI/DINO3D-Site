@@ -566,7 +566,7 @@ export class Game {
 
   private update(dt: number) {
     this.time += dt;
-    if (this.cb.autoPlay && this.state === "over" && this.time - (this.deadAt / 1000) > 1.1) {
+    if (this.cb.autoPlay && this.state === "over" && performance.now() - this.deadAt > 1100) {
       this.restart();
     }
     const playing = this.state === "playing";
