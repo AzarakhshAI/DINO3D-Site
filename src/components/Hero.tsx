@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Game } from "../game/OriginalGame";
 import { AUTHOR_HI, GAME_URL } from "../config";
-import DinoCanvas from "./DinoCanvas";
 import { CountUp, Reveal } from "./ui";
 
 const pad = (n: number) => String(n).padStart(5, "0");
