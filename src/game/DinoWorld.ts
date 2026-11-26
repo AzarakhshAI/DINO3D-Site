@@ -408,7 +408,7 @@ export class DinoWorld {
         group: b.g,
         x,
         w: 1.7,
-        h: 1.0,
+        h: 0.54,
         y0: level - 0.22,
         bird: true,
         decor: false,
@@ -782,16 +782,28 @@ export class DinoWorld {
     // collision (play)
     if (this.mode === "play" && moving) {
       const low = this.ducking && this.grounded;
-      const top = this.dinoY + (low ? 2.0 : 3.9);
-      const bottom = this.dinoY;
+      const dinoBoxes = low
+        ? [{ x0: DINO_X - 0.5, x1: DINO_X + 1.15, y0: this.dinoY + 0.05, y1: this.dinoY + 1.05 }]
+        : [
+            { x0: DINO_X - 0.5, x1: DINO_X + 0.2, y0: this.dinoY + 0.05, y1: this.dinoY + 1.35 },
+            { x0: DINO_X - 0.1, x1: DINO_X + 0.7, y0: this.dinoY + 1.2, y1: this.dinoY + 2.2 },
+          ];
       for (const o of this.obstacles) {
         if (o.decor) continue;
-        const hw = o.w / 2 + 0.75 - 0.2;
-        if (Math.abs(o.x - (DINO_X + 0.3)) < hw) {
-          if (bottom < o.y0 + o.h - 0.25 && top > o.y0 + 0.1) {
-            this.die();
-            break;
-          }
+        const obstacleBox = {
+          x0: o.x - o.w / 2 + 0.08,
+          x1: o.x + o.w / 2 - 0.08,
+          y0: o.y0 + 0.08,
+          y1: o.y0 + o.h - 0.08,
+        };
+        if (dinoBoxes.some((b) =>
+          b.x0 < obstacleBox.x1 &&
+          b.x1 > obstacleBox.x0 &&
+          b.y0 < obstacleBox.y1 &&
+          b.y1 > obstacleBox.y0
+        )) {
+          this.die();
+          break;
         }
       }
     }
