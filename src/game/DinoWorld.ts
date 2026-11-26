@@ -155,6 +155,10 @@ export class DinoWorld {
   private overAt = 0;
   private shake = 0;
   private time = 0;
+  private nightT = 0;
+  private nightOn = false;
+  private nightTimer = 0;
+  private nightIdx = 0;
 
   // loop
   private raf = 0;
@@ -493,7 +497,8 @@ export class DinoWorld {
 
   applyTheme(dark: boolean) {
     this.dark = dark;
-    const p = dark ? PAL.dark : PAL.light;
+    const useDarkPalette = dark || this.nightT > 0.5;
+    const p = useDarkPalette ? PAL.dark : PAL.light;
     this.scene.background = new THREE.Color(p.bg);
     this.fog.color.set(p.bg);
     this.mats.ground.color.set(p.ground);
@@ -508,7 +513,7 @@ export class DinoWorld {
     this.mats.shadow.opacity = p.shadow;
     this.ambient.intensity = p.ambient;
     this.sun.intensity = p.dir;
-    (this.stars.material as THREE.PointsMaterial).opacity = dark ? 0.85 : 0;
+    (this.stars.material as THREE.PointsMaterial).opacity = useDarkPalette ? 0.85 : 0;
   }
 
   /* ───────────── control ───────────── */
@@ -651,6 +656,20 @@ export class DinoWorld {
       // Match the original DINO 3D runner: steady acceleration and distance-based score.
       this.speed = Math.min(MAX_SPEED, this.speed + 0.12 * dt);
       this.score += dt * this.speed;
+      const nightIndex = Math.floor(this.score / 700);
+      if (nightIndex > this.nightIdx) {
+        this.nightIdx = nightIndex;
+        this.nightOn = true;
+        this.nightTimer = 16;
+      }
+      if (this.nightOn) {
+        this.nightTimer -= dt;
+        if (this.nightTimer <= 0) this.nightOn = false;
+      }
+      const nightTarget = this.nightOn ? 1 : 0;
+      const previousNight = this.nightT;
+      this.nightT += Math.sign(nightTarget - this.nightT) * Math.min(Math.abs(nightTarget - this.nightT), dt * 1.1);
+      if (previousNight !== this.nightT) this.applyTheme(this.dark);
       this.emitScore();
       if (this.mode === "auto") this.autopilot();
     } else {
