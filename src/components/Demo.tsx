@@ -1,106 +1,77 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AUTHOR_HI, GAME_URL } from "../config";
-import type { GameState, SoundKind } from "../game/DinoWorld";
-import { playSound } from "../game/sound";
-import DinoCanvas, { type DinoHandle } from "./DinoCanvas";
+import { Game, type GameState } from "../game/OriginalGame";
 import { Reveal } from "./ui";
 
-const pad = (n: number) => String(n).padStart(5, "0");
-const KEY = "dino3d-hi";
+const pad = (n: number) => String(Math.min(99999, Math.max(0, Math.floor(n)))).padStart(5, "0");
 
 function loadHi() {
   try {
-    return Number(localStorage.getItem(KEY)) || 0;
+    return Number(localStorage.getItem("dino3d-hi")) || 0;
   } catch {
     return 0;
   }
 }
 
 export default function Demo({ dark }: { dark: boolean }) {
-  void dark;
-  const game = useRef<DinoHandle>(null);
+  void dark; // The original game controls its own day/night cycle.
   const section = useRef<HTMLElement>(null);
+  const host = useRef<HTMLDivElement>(null);
+  const game = useRef<Game | null>(null);
   const visible = useRef(false);
-  const soundRef = useRef(true);
-  const hiRef = useRef(loadHi());
 
   const [sound, setSound] = useState(true);
   const [state, setState] = useState<GameState>("ready");
+  const [paused, setPaused] = useState(false);
   const [score, setScore] = useState(0);
-  const [hi, setHi] = useState(hiRef.current);
-  const [flash, setFlash] = useState(0);
+  const [hi, setHi] = useState(loadHi());
+  const [scoreVisible, setScoreVisible] = useState(true);
 
-  useEffect(() => {
-    soundRef.current = sound;
-  }, [sound]);
-
-  const onSound = useCallback((k: SoundKind) => {
-    if (soundRef.current) playSound(k);
-    if (k === "milestone") setFlash((f) => f + 1);
-  }, []);
-
-  const onState = useCallback((s: GameState) => {
-    setState(s);
-  }, []);
-
-  const onScore = useCallback((s: number) => {
-    setScore(s);
-    if (s > hiRef.current) {
-      hiRef.current = s;
-      setHi(s);
-      try {
-        localStorage.setItem(KEY, String(s));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // visibility + keyboard
   useEffect(() => {
     const el = section.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([e]) => {
-        visible.current = e.isIntersecting;
+    const mount = host.current;
+    if (!el || !mount) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        visible.current = entry.isIntersecting;
       },
-      { threshold: 0.45 }
+      { threshold: 0.2 }
     );
-    io.observe(el);
+    observer.observe(el);
 
-    const isUi = (t: EventTarget | null) =>
-      t instanceof HTMLElement &&
-      ["BUTTON", "A", "INPUT", "TEXTAREA", "SELECT"].includes(t.tagName);
+    let instance: Game;
+    try {
+      instance = new Game(mount, {
+        isActive: () => visible.current,
+        onState: (next) => {
+          setState(next);
+          if (next !== "playing") setPaused(false);
+        },
+        onScore: (nextScore, nextHi, shown) => {
+          setScore(nextScore);
+          setHi(nextHi);
+          setScoreVisible(shown);
+        },
+        onPause: setPaused,
+        onMute: setSound,
+      });
+    } catch {
+      mount.textContent = "مرورگر شما از WebGL پشتیبانی نمی‌کند. لطفاً مرورگر دیگری را امتحان کنید.";
+      observer.disconnect();
+      return;
+    }
 
-    const down = (e: KeyboardEvent) => {
-      if (!visible.current || isUi(e.target)) return;
-      if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") {
-        e.preventDefault();
-        if (!e.repeat) game.current?.jump();
-      } else if (e.code === "ArrowDown" || e.code === "KeyS") {
-        e.preventDefault();
-        game.current?.setDuck(true);
-      } else if (e.code === "KeyP" || e.code === "Escape") {
-        e.preventDefault();
-        game.current?.togglePause();
-      } else if (e.code === "KeyM") {
-        soundRef.current = !soundRef.current;
-        setSound(soundRef.current);
-      }
-    };
-    const up = (e: KeyboardEvent) => {
-      if (e.code === "ArrowDown" || e.code === "KeyS") {
-        game.current?.setDuck(false);
-      }
-    };
-    window.addEventListener("keydown", down);
-    window.addEventListener("keyup", up);
+    game.current = instance;
     return () => {
-      io.disconnect();
-      window.removeEventListener("keydown", down);
-      window.removeEventListener("keyup", up);
+      visible.current = false;
+      observer.disconnect();
+      instance.dispose();
+      game.current = null;
     };
   }, []);
+
+  const toggleSound = () => game.current?.setMuted(!sound);
 
   const beatAuthor = state === "over" && score > AUTHOR_HI;
 
@@ -119,8 +90,8 @@ export default function Demo({ dark }: { dark: boolean }) {
             همین‌جا بازی کن!
           </h2>
           <p className="mt-5 leading-8 text-soft">
-            این دمو از منطق اصلی بازی DINO 3D استفاده می‌کند. با <b className="text-ink">Space</b> یا
-            لمس صفحه بپر و با <b className="text-ink">↓</b> خم شو. فکر می‌کنی
+            این نسخه، موتور اصلی بازی DINO 3D است. با <b className="text-ink">Space</b> یا لمس
+            صفحه بپر و با <b className="text-ink">↓</b> خم شو. فکر می‌کنی
             بتونی رکورد من، <span className="font-pixel text-xs text-ink" dir="ltr">{pad(AUTHOR_HI)}</span>، رو بشکنی؟
           </p>
         </Reveal>
@@ -128,36 +99,15 @@ export default function Demo({ dark }: { dark: boolean }) {
         <Reveal delay={150} className="mt-12">
           <div
             className="pixel-box scanlines relative mx-auto h-[min(62vh,540px)] min-h-[340px] w-full max-w-5xl select-none overflow-hidden"
-            style={{ touchAction: "manipulation" }}
+            style={{ touchAction: "none" }}
           >
-            <DinoCanvas
-              ref={game}
-              mode="play"
-              dark={dark}
-              className="absolute inset-0 cursor-pointer"
-              onScore={onScore}
-              onState={onState}
-              onSound={onSound}
-            />
+            <div ref={host} className="absolute inset-0 cursor-pointer" />
 
-            {/* tap layer */}
-            <div
-              className="absolute inset-0 z-10"
-              onPointerDown={(e) => {
-                e.preventDefault();
-                game.current?.jump();
-              }}
-            />
-
-            {/* HUD */}
-            <div
-              className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between p-3 sm:p-5"
-              dir="ltr"
-            >
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between p-3 sm:p-5" dir="ltr">
               <button
                 className="hud-btn pointer-events-auto"
                 onClick={(e) => {
-                  setSound((s) => !s);
+                  toggleSound();
                   e.currentTarget.blur();
                 }}
                 onPointerDown={(e) => e.stopPropagation()}
@@ -166,55 +116,40 @@ export default function Demo({ dark }: { dark: boolean }) {
               </button>
               <div className="font-pixel text-[10px] text-soft sm:text-base">
                 <span>HI {pad(hi)}</span>
-                <span
-                  key={flash}
-                  className={`ml-3 text-ink sm:ml-6 ${flash ? "hud-flash" : ""}`}
-                >
+                <span className="ml-3 text-ink sm:ml-6" style={{ visibility: scoreVisible ? "visible" : "hidden" }}>
                   {pad(score)}
                 </span>
               </div>
             </div>
 
-            {/* overlays */}
             {state === "ready" && (
               <div className="pointer-events-none absolute inset-x-0 top-[22%] z-20 text-center">
                 <div className="pop inline-block bg-paper/80 px-5 py-4 backdrop-blur-sm">
-                  <div className="font-pixel text-xs text-ink sm:text-base" dir="ltr">
-                    PRESS SPACE / TAP
-                  </div>
-                  <div className="blink mt-3 text-sm font-bold text-soft">
-                    برای شروع بزن
-                  </div>
+                  <div className="font-pixel text-xs text-ink sm:text-base" dir="ltr">PRESS SPACE / TAP</div>
+                  <div className="blink mt-3 text-sm font-bold text-soft">برای شروع بزن</div>
                 </div>
               </div>
             )}
-            {state === "paused" && (
+            {paused && (
               <div className="pointer-events-none absolute inset-x-0 top-[22%] z-20 text-center">
                 <div className="pop inline-block bg-paper/85 px-6 py-5 backdrop-blur-sm">
                   <div className="font-pixel text-sm text-ink sm:text-xl" dir="ltr">PAUSED</div>
-                  <div className="mt-3 text-sm font-bold text-soft">برای ادامه P را بزن</div>
+                  <div className="mt-3 text-sm font-bold text-soft">برای ادامه P یا لمس صفحه را بزن</div>
                 </div>
               </div>
             )}
             {state === "over" && (
               <div className="pointer-events-none absolute inset-x-0 top-[18%] z-20 text-center">
                 <div className="pop inline-block bg-paper/85 px-6 py-5 backdrop-blur-sm">
-                  <div className="font-pixel text-sm text-ink sm:text-xl" dir="ltr">
-                    G A M E&nbsp;&nbsp;O V E R
-                  </div>
+                  <div className="font-pixel text-sm text-ink sm:text-xl" dir="ltr">G A M E&nbsp;&nbsp;O V E R</div>
                   {beatAuthor && (
-                    <div className="mt-3 text-sm font-extrabold text-accent sm:text-base">
-                      🎉 رکورد حسین رو شکستی!
-                    </div>
+                    <div className="mt-3 text-sm font-extrabold text-accent sm:text-base">🎉 رکورد حسین رو شکستی!</div>
                   )}
-                  <div className="mt-3 text-sm font-bold text-soft">
-                    دوباره بزن تا شروع بشه
-                  </div>
+                  <div className="mt-3 text-sm font-bold text-soft">برای شروع دوباره بزن</div>
                 </div>
               </div>
             )}
 
-            {/* DUCK button */}
             <button
               className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 touch-none border-[3px] border-soft bg-paper/60 px-6 py-3 font-pixel text-[10px] text-soft backdrop-blur-sm transition-colors hover:text-ink active:border-ink active:text-ink sm:text-xs"
               onPointerDown={(e) => {
@@ -230,23 +165,18 @@ export default function Demo({ dark }: { dark: boolean }) {
             >
               DUCK ↓
             </button>
-            <div
-              className="pointer-events-none absolute bottom-4 right-4 z-20 hidden font-pixel text-[10px] text-soft sm:block"
-              dir="ltr"
-            >
+            <div className="pointer-events-none absolute bottom-4 right-4 z-20 hidden font-pixel text-[10px] text-soft sm:block" dir="ltr">
               TAP = JUMP
+            </div>
+            <div className="pointer-events-none absolute bottom-4 left-4 z-20 hidden font-pixel text-[9px] text-soft sm:block" dir="ltr">
+              P / ESC = PAUSE · M = MUTE
             </div>
           </div>
         </Reveal>
 
         <Reveal delay={250} className="mt-12 text-center">
           <p className="mb-6 text-soft">دمو باحال بود؟ نسخه‌ی کامل و بی‌پایانش منتظرته 👇</p>
-          <a
-            href={GAME_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="pixel-btn text-lg"
-          >
+          <a href={GAME_URL} target="_blank" rel="noopener noreferrer" className="pixel-btn text-lg">
             ▶ بازی کامل را شروع کن
           </a>
         </Reveal>
